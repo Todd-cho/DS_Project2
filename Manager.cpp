@@ -31,7 +31,7 @@ Manager::~Manager() {
 }
 
 void Manager::run(const char* command_txt) {
-    fcmd.open(command_txt);
+    fcmd.open(command_txt, ios::in);
     flog.open("log.txt", ios::app); // Open log.txt for appending
     if (!fcmd) {
         printErrorCode(100);
@@ -39,6 +39,9 @@ void Manager::run(const char* command_txt) {
     }
     string line;
     while (getline(fcmd, line)) {  // Read file line by line
+        if (!line.empty() && line[line.length() - 1] == '\r')
+            line.erase(line.length() - 1);
+
         if (line.empty()) continue;
 
         vector<string> split; // Vector to store parsed commands
@@ -47,9 +50,10 @@ void Manager::run(const char* command_txt) {
 
         // Split by tab
         while (getline(sstr, token, '\t')) {
-            split.push_back(token);
+            if (!token.empty()) {  // ignore empty token
+                split.push_back(token);
+            }
         }
-
         // Skip if no command
         if (split.empty()) continue;
 
@@ -94,15 +98,18 @@ void Manager::run(const char* command_txt) {
         }
         // SEARCH_BP command
         else if (command == "SEARCH_BP") {
-            if (bp->getRoot() == nullptr) printErrorCode(400); // Error if BP tree is empty
-
+            if (bp->getRoot() == nullptr) {
+                printErrorCode(400); // Error if BP tree is empty
+            }
             if (split.size() == 2) { // Single key search
                 SEARCH_BP(split[1]);
             }
             else if (split.size() == 3) { // Range search
                 SEARCH_BP(split[1], split[2]);
             }
-            else printErrorCode(400); // Error for invalid number of arguments
+            else {
+                printErrorCode(400); // Error if BP tree is empty
+            }
         }
         // VLOAD command
         else if (command == "VLOAD") {
@@ -196,6 +203,9 @@ bool Manager::VLOAD() {
 
 bool Manager::ADD(string Airline, string FlightNumber, string Destination, string Status) {
     FlightData* dataNode = bp->findFlightData(FlightNumber); // Search by flight number
+    string currentStatus = dataNode->GetStatus();
+    currentStatus.erase(remove(currentStatus.begin(), currentStatus.end(), '\n'), currentStatus.end());
+    currentStatus.erase(remove(currentStatus.begin(), currentStatus.end(), '\r'), currentStatus.end());
 
     if (!dataNode) { // Add new flight if number doesn't exist
         data = new FlightData;
@@ -203,11 +213,14 @@ bool Manager::ADD(string Airline, string FlightNumber, string Destination, strin
         data->SetFlightNumber(FlightNumber);
         data->SetDestination(Destination);
         data->SetStatus(Status);
+
         // Set number of seats based on airline
         if (Airline == "KoreanAir" || Airline == "ASIANA")
             data->SetNumberofSeats(7);
         else if (Airline == "JEJU") {
-            if (Destination != "CJU") printErrorCode(300); //if destination is not CJU, error
+            if (Destination != "CJU") {
+                printErrorCode(300); //if destination is not CJU, error
+            }
             else data->SetNumberofSeats(5);
         }
         else if (Airline == "JeanAir")
@@ -224,10 +237,10 @@ bool Manager::ADD(string Airline, string FlightNumber, string Destination, strin
         }
         // Handle BOARDING status
         if (Status == "Boarding") {
-            if (dataNode->GetStatus() == "Boarding" || dataNode->GetStatus() == "Cancelled") {
+            if (currentStatus == "Boarding" || currentStatus == "Cancelled") {
                 dataNode->SetSeatsDec(); // Decrease seats if current status is BOARDING or CANCELLED
             }
-            else if (dataNode->GetStatus() == "Cancelled") {
+            else if (currentStatus == "Cancelled") {
                 dataNode->SetStatus("Boarding"); // Update status if CANCELLED
             }
             else {
@@ -272,15 +285,12 @@ bool Manager::SEARCH_BP(string name) { // Single search function
         return false;
     }
     FlightData* dataNode = bp->findFlightData(name);
-   //auto dataMap = dataNode->getDataMap();
-    //auto iter = dataMap->find(name);
 
     if (!dataNode) {
         printErrorCode(400); // Error if flight not found
         return false;
     }
     else {
-       // FlightData* flight = iter->second;
         // Log search results
         flog << "========SEARCH_BP========" << endl;
         flog << dataNode->GetFlightNumber() << " | "

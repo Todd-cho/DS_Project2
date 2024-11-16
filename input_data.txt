@@ -1,5 +1,5 @@
-KOREANAIR KE901 LAX 1 Boarding
+KoreanAir KE901 LAX 1 Boarding
 ASIANA OZ107 SIN 1 Boarding
 JEJU 7C024 CJU 3 Delayed
-JEANAIR JA111 MUC 4 Departure 
-AIRKWANGWOON AK101 LHR 6 Cancelled
+JeanAir JA111 MUC 4 Departure 
+AirKwangwoon AK101 LHR 6 Cancelled
